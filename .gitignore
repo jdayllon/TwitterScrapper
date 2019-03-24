@@ -1,0 +1,6 @@
+# File with private tokens
+.env
+# Ignore output json dir
+/json/
+# ignore MSGPack files
+*.msg
