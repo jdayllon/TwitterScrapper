@@ -2,5 +2,6 @@
 .env
 # Ignore output json dir
 /json/
+ .ipynb_checkpoints/
 # ignore MSGPack files
 *.msg
