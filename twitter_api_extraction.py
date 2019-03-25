@@ -2,9 +2,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import twitter
 from time import sleep
-
 from elasticsearch import Elasticsearch,helpers,RequestError
-from elasticsearch_dsl import connections, Index
 from random import choices
 from scalpl import Cut
 import pandas as pd
@@ -13,6 +11,7 @@ import click
 from tqdm import tnrange, tqdm
 import logging
 import arrow
+from art import tprint
 
 load_dotenv(find_dotenv(), verbose=True)
 
@@ -20,7 +19,7 @@ CONSUMER_KEY = os.getenv("CONSUMER_KEY")
 CONSUMER_SECRET= os.getenv("CONSUMER_SECRET")
 ACCESS_TOKEN_KEY= os.getenv("ACCESS_TOKEN_KEY")
 ACCESS_TOKEN_SECRET= os.getenv("ACCESS_TOKEN_SECRET")
-STATUSES_INDEX = "statuses"
+STATUSES_INDEX = "twitter"
 TWITTER_DATETIME_PATTERN = "ddd MMM DD HH:mm:SS Z YYYY"
 STEP= 100
 logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
@@ -60,7 +59,7 @@ def save_json(json_string, filename, protocol = 0):
 @click.command()
 @click.option('-i','--input', help='Input file in MSGPACK format with a column named STATUS_ID with Twitter STATUS_ID ;-)', required=True, type=str)
 @click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200 (default)')
-@click.option('-x','--elasticindex', help='Elastic search Index (default STATUSES)')
+@click.option('-x','--elasticindex', help='Elastic search Index (default twitter)')
 # TODO
 #click.option('-u','--elasticuser', help='Elastic search user (if authentication is needed)')
 #click.option('-p','--elasticpass', help='Elastic search pass (if authentication is needed)')
@@ -123,4 +122,5 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
     
 
 if __name__ == '__main__':
+    tprint("Twitter API Extraction")
     download_api_statuses()

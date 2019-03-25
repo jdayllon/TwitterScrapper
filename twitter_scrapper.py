@@ -10,6 +10,7 @@ import click
 from unidecode import unidecode
 import re
 import urllib
+from art import tprint
 
 def get_search_url_by_day(q, date):
     
@@ -117,4 +118,5 @@ def scape_twitter_by_date(query, start_date=arrow.get().format('YYYY-MM-DD'), en
         df.to_msgpack(output_filename)
 
 if __name__ == '__main__':
+    tprint("Twitter Scrapper")
     scape_twitter_by_date()
