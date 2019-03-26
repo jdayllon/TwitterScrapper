@@ -38,7 +38,7 @@ python twitter_scrapper.py -q 'to:ServiciosAND OR to:AndaluciaJunta OR to:OpenDa
 
 Get Tweet data from Twitter API
 ```
-
+python twitter_api_extraction.py -i 20180101_20190326--toserviciosand-or-toandaluciajunta-or-toopendataand.msg
 ```
 
 
@@ -47,7 +47,7 @@ Get Tweet data from Twitter API
 - [x] Add a Requierements files for pythons script or Pipenv
 - [ ] Add a Docker-Compose file to create a simple ElasticSearch + Kibana service
 - [x] Add config parameters to full_load_json_directory_es.py
-- [ ] Add comments to functions
+- [x] Add comments to functions
 - [ ] Add engagement info to tweet data
 - [ ] Reenginering functions (maybe a "lib" script)
 
