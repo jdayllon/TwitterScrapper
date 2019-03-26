@@ -25,11 +25,34 @@ CONSUMER_SECRET='<<YOUR_CONSUMER_SECRET_FROM_TWITTER>>'
 ACCESS_TOKEN_KEY='<<YOUR_ACCESS_TOKEN_KEY_FROM_TWITTER>>'
 ACCESS_TOKEN_SECRET='<<YOUR_ACCESS_TOKEN_SECRET_FROM_TWITTER>>'
 ```
+## Usage samples
 
-## Todo
+Get tweets from a particular user for a month
+```
+python twitter_scrapper.py -q 'from:jda11on' -s 2019-01-01 -e 2019-01-31
+```
+More complex twitter query:
+```
+python twitter_scrapper.py -q 'to:ServiciosAND OR to:AndaluciaJunta OR to:OpenDataAND' -s 2011-12-01 -e 2019-03-26
+```
 
-* Add a Requierements files for pythons script or Pipenv
-* Add a Docker-Compose file to create a simple ElasticSearch + Kibana service
-* Add config parameters to full_load_json_directory_es.py
+Get Tweet data from Twitter API
+```
+
+```
+
+
+## TODOs
+
+- [x] Add a Requierements files for pythons script or Pipenv
+- [ ] Add a Docker-Compose file to create a simple ElasticSearch + Kibana service
+- [x] Add config parameters to full_load_json_directory_es.py
+- [ ] Add comments to functions
+- [ ] Add engagement info to tweet data
+- [ ] Reenginering functions (maybe a "lib" script)
+
+## References
+
+* Elasticsearch - Defining the mapping of Twitter Data. https://medium.com/@CMpoi/elasticsearch-defining-the-mapping-of-twitter-data-dafad0f50695
 
 

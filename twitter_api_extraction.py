@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from dotenv import load_dotenv, find_dotenv
 import os
 import twitter
@@ -12,7 +13,7 @@ from tqdm import tnrange, tqdm
 import logging
 import arrow
 from art import tprint
-
+import io
 load_dotenv(find_dotenv(), verbose=True)
 
 CONSUMER_KEY = os.getenv("CONSUMER_KEY")
@@ -26,9 +27,21 @@ logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=logFormatter, level=logging.INFO)
 logger = logging.getLogger("tools")
 logger.setLevel(logging.INFO)
+es_logger = logging.getLogger('elasticsearch')
+es_logger.setLevel(logging.WARNING)
 
-# Ref https://stackoverflow.com/a/29689275
-def dotter(d, key, dots):
+
+def dotter(d: dict, key, dots):
+    """Creates a list of key of a dict is very useful to use with Scalpl
+    Arguments:
+        d {dict} -- Input dictionary
+        key {[type]} -- Recursive keys
+        dots {[type]} -- Recursive return values
+    
+    Returns:
+        [type] -- [description]
+    """
+    #* Comes from a fef in stakoverflow https://stackoverflow.com/a/29689275
     
     if isinstance(d, dict):
         for k in d:
@@ -38,10 +51,14 @@ def dotter(d, key, dots):
 
     return dots
 
-def save_json(json_string, filename, protocol = 0):
+def save_json(json_string: str, filename: str):
     """Saves a non-compressed object to disk
+    
+    Arguments:
+        json_string {str} -- String with a json 
+        filename {str} -- Output filename
+    
     """
-
     filename_only = filename.split('/')[-1]
     path = "/".join(filename.split("/")[:-1]) + "/"
     try:
@@ -58,12 +75,24 @@ def save_json(json_string, filename, protocol = 0):
 
 @click.command()
 @click.option('-i','--input', help='Input file in MSGPACK format with a column named STATUS_ID with Twitter STATUS_ID ;-)', required=True, type=str)
-@click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200 (default)')
-@click.option('-x','--elasticindex', help='Elastic search Index (default twitter)')
-# TODO
+@click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200 (default)', type=str , default="http://127.0.0.1:9200/")
+@click.option('-x','--elasticindex', help='Elastic search Index (default twitter)', type=str , default="twitter")
+# TODO Add Authparameters
 #click.option('-u','--elasticuser', help='Elastic search user (if authentication is needed)')
 #click.option('-p','--elasticpass', help='Elastic search pass (if authentication is needed)')
 def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, elasticpass: str = None, elasticindex: str= STATUSES_INDEX):
+    """Goes to twitter API an get status info and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too
+    
+    Arguments:
+        input {str} -- [description]
+        elasticuri {str} -- [description]
+    
+    Keyword Arguments:
+        elasticuser {str} -- [description] (default: {None})
+        elasticpass {str} -- [description] (default: {None})
+        elasticindex {str} -- [description] (default: {STATUSES_INDEX})
+    """
+
 
     # Create a connection with Elastic
     if elasticuri is not None:
@@ -118,6 +147,7 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
             es.index(index=elasticindex,
                     #ignore=400,
                     doc_type='status',
+                    id = cur_id_str,
                     body=cur_json)
     
 

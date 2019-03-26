@@ -1,7 +1,7 @@
 # File with private tokens
 .env
 # Ignore output json dir
-/json/
- .ipynb_checkpoints/
+/json*/
+.ipynb_checkpoints/
 # ignore MSGPack files
 *.msg
