@@ -5,3 +5,4 @@
 .ipynb_checkpoints/
 # ignore MSGPack files
 *.msg
+*.last_launch

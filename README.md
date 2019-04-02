@@ -14,6 +14,8 @@ There are several scripts:
 * setup_elastic_es.sh. Creates a "twitter" index in ElasticSearch and put a customized mapping with **spanish analyzers** activated
   * index_status_es.json. Json with index configuration for ElasticSearch
   * mapping_status_es.json. Json with mapping configuration for ElasticSearch (spanish analyzers included)
+* twitter_get_3k2.py. Goes to Twitter API with an user id and gets lastest statuses and loops over it up to 3200 limit. 
+  * You can a start status id (since) and get all updates after that status. It can be useful to grab updates. 
 
 ## Enviorenment 
 
@@ -41,6 +43,25 @@ Get Tweet data from Twitter API
 python twitter_api_extraction.py -i 20180101_20190326--toserviciosand-or-toandaluciajunta-or-toopendataand.msg
 ```
 
+Get Lastest TimeLine updates from a user
+```
+python twitter_get_3k2.py -u AndaluciaJunta -s 1112819068057370624 -e http://127.0.0.1:9200
+```
+
+## Crontab
+
+If you want a continous updating you can create a simple bash script to use with cron like this:
+```
+#!/bin/sh
+output_file="$1.last_launch"
+if [ -e $output_file ]
+then
+    value=`tail -1 $output_file`
+else
+    value=0
+fi
+python twitter_get_3k2.py -e "http://127.0.0.1:9200" -u $1 -s $value > $output_file
+```
 
 ## TODOs
 

@@ -14,6 +14,7 @@ import logging
 import arrow
 from art import tprint
 import io
+import sys
 load_dotenv(find_dotenv(), verbose=True)
 
 CONSUMER_KEY = os.getenv("CONSUMER_KEY")
@@ -29,7 +30,7 @@ logger = logging.getLogger("tools")
 logger.setLevel(logging.INFO)
 es_logger = logging.getLogger('elasticsearch')
 es_logger.setLevel(logging.WARNING)
-
+first_status_id = 0 
 
 def dotter(d: dict, key, dots):
     """Creates a list of key of a dict is very useful to use with Scalpl
@@ -74,18 +75,19 @@ def save_json(json_string: str, filename: str):
 
 
 @click.command()
-@click.option('-i','--input', help='Input file in MSGPACK format with a column named STATUS_ID with Twitter STATUS_ID ;-)', required=True, type=str)
-@click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200 (default)', type=str , default="http://127.0.0.1:9200/")
+@click.option('-u','--user', prompt='User timeline', help='Get lastest 3k2 from timeline.', required=True, type=str)
+@click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200', type=str )
 @click.option('-x','--elasticindex', help='Elastic search Index (default twitter)', type=str , default="twitter")
-@click.option('-t','--time_sleep', help="'Time between twitter api requests in seconds (min 1.1 secs) ", type=float, default=1.1)
+@click.option('-t','--time_sleep', help="Time between twitter api requests in seconds (min 1.1 secs) ", type=float, default=1.1)
+@click.option('-s','--since', help="'Since Status Id", default="0")
 # TODO Add Authparameters
 #click.option('-u','--elasticuser', help='Elastic search user (if authentication is needed)')
 #click.option('-p','--elasticpass', help='Elastic search pass (if authentication is needed)')
-def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, elasticpass: str = None, elasticindex: str= STATUSES_INDEX, time_sleep: float = 1.1):
-    """Goes to twitter API an get status info and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too
+def download_api_timeline(user: str, elasticuri: str, elasticuser: str = None, elasticpass: str = None, elasticindex: str= STATUSES_INDEX, time_sleep: float = 1.1, since: str ='0'):
+    """Goes to twitter API an get timeline of a user_id and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too
     
     Arguments:
-        input {str} -- [description]
+        user {str} -- [description]
         elasticuri {str} -- [description]
     
     Keyword Arguments:
@@ -94,6 +96,7 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
         elasticindex {str} -- [description] (default: {STATUSES_INDEX})
     """
 
+    global first_status_id
 
     # Create a connection with Elastic
     if elasticuri is not None:
@@ -108,8 +111,6 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
     except:
         logger.error("Time Sleep less than 1.1 secs (minimum) ")
         raise err
-    # Read MSGPACK file whith statuses id
-    df = pd.read_msgpack(input)
 
     api = twitter.Api(consumer_key=CONSUMER_KEY,
                   consumer_secret=CONSUMER_SECRET,
@@ -117,22 +118,36 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
                   access_token_secret=ACCESS_TOKEN_SECRET,
                   tweet_mode='extended')
 
-    all_statuses_id = df['STATUS_ID'].tolist()
-    
     # Go to Twitter API and get statuses by id
-    logger.info("Downloading Statuses from Twitter API")
+    logger.info("Downloading TimeLine Statuses from Twitter API")
+    
     all_statuses_data = []
-    for i in tqdm(range(0,len(all_statuses_id),STEP)):
-        if i+STEP > len(all_statuses_id):
-            cur_statuses = all_statuses_id[i:len(all_statuses_id)]
-        else:
-            cur_statuses = all_statuses_id[i:i+STEP]
-        cur_statuses_data = api.GetStatuses(cur_statuses)
-        all_statuses_data += cur_statuses_data
-        sleep(1.1)
+    logger.info("Starting at STATUS_ID: %s" % since)
+
+    since_id = int(since)
+
+    statuses = api.GetUserTimeline(screen_name=user, count=200, include_rts=True, exclude_replies=False, since_id = since_id)
+    if len(statuses) == 0:
+        print("%s" % since)
+        logger.warning("There isn't new results for this Timeline")
+        return since
+    all_statuses_data += statuses
+    last_status_id = statuses[-1].id
+    first_status_id = statuses[0].id
+
+
+    # If first status is equals to last in 'query' this means that all tweets has been readed
+    while statuses[0].id != last_status_id and statuses is not []:
+        statuses = api.GetUserTimeline(screen_name=user, count=200, include_rts=True, exclude_replies=False, max_id=last_status_id, since_id = since_id)
+        logger.info("Readed: %d twts | Total: %d" % (len(statuses), len(all_statuses_data)))
+        all_statuses_data += statuses
+        last_status_id = statuses[-1].id
+        sleep(time_sleep)
+
+    all_statuses_data = set(all_statuses_data)
     
     # Save all jsons to file and load into Elastic
-    logger.info("Processing Statuses from Twitter API to save jsons")
+    logger.info("Processing TimeLine Statuses from Twitter API to save jsons")
     for c_status_data in tqdm(all_statuses_data):
         cur_dict = Cut(c_status_data.AsDict())
         cur_id_str = cur_dict['id_str']
@@ -156,8 +171,9 @@ def download_api_statuses(input: str, elasticuri: str, elasticuser: str = None, 
                     doc_type='status',
                     id = cur_id_str,
                     body=cur_json)
-    
+    # STDOut and STDErr
+    print("%d" % first_status_id)
 
 if __name__ == '__main__':
-    tprint("Twitter API Extraction")
-    download_api_statuses()
+    tprint("Twitter 3k2 Timeline ")
+    download_api_timeline()
