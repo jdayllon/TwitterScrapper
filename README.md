@@ -29,6 +29,18 @@ CONSUMER_SECRET='<<YOUR_CONSUMER_SECRET_FROM_TWITTER>>'
 ACCESS_TOKEN_KEY='<<YOUR_ACCESS_TOKEN_KEY_FROM_TWITTER>>'
 ACCESS_TOKEN_SECRET='<<YOUR_ACCESS_TOKEN_SECRET_FROM_TWITTER>>'
 ```
+
+Job Runners uses a YML file to define jobs, this is the current format:
+```
+elasticsearch_uri: http://url_of_your_elasticsearch
+elasticsearch_index: index_name_in_elastic_search
+jobs:
+  - user: some_user_twitter_id
+    schedule: minutes(5)
+  - query: some_twitter_query
+    schedule: minutes(1)   
+```
+
 ## Usage samples
 
 Get tweets from a particular user for a month
@@ -48,6 +60,30 @@ python api_extraction.py -i 20180101_20190326--toserviciosand-or-toandaluciajunt
 Get Lastest TimeLine updates from a user
 ```
 python get_timeline.py -u AndaluciaJunta -s 1112819068057370624 -e http://127.0.0.1:9200
+```
+
+Job Runner example:
+```
+python job_runner.py -j twitter_scapper.yml
+```
+
+and YML format:
+```
+elasticsearch_uri: http://127.0.0.1:9200
+elasticsearch_index: twitter
+jobs:
+  - user: AndaluciaJunta
+    schedule: minutes(5)
+  - user: ServiciosAND
+    schedule: minutes(7)
+  - user: OpenDataAND
+    schedule: minutes(10)
+  - query: Junta de Andalucía
+    schedule: minutes(10)
+  - query: to:ServiciosAND OR to:AndaluciaJunta OR to:OpenDataAND
+    schedule: minutes(10)
+  - query: Andalucía OR Andalucia
+    schedule: minutes(1)        
 ```
 
 ## Crontab

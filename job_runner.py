@@ -49,7 +49,7 @@ def query_update_job(elasticsearch_url, elasticsearch_index, query):
     logger.info("🏁... 🔎 : %s" % (query))
 
 @click.command()
-@click.option('-s','--job_settings', prompt='Enter yml job settings file', help='YML file with the definition', required=True, type=str, default = 'twitter_scrapper.yml')
+@click.option('-j','--job_settings', prompt='Enter yml job settings file', help='YML file with the definition', required=True, type=str, default = 'twitter_scrapper.yml')
 def job_scheduler(job_settings:str):
     """Reads YML info and starts cron like jobs
     
