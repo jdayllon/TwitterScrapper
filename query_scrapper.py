@@ -7,16 +7,17 @@ from tqdm import tqdm, tnrange
 import pandas as pd
 import pickle
 import click
-from unidecode import unidecode
 import re
 import urllib
 from art import tprint
 import logging
+from tools import slugify
+from loguru import logger
 
-logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
-logging.basicConfig(format=logFormatter, level=logging.INFO)
-logger = logging.getLogger("tools")
-logger.setLevel(logging.INFO)
+#logging.basicConfig(format=logFormatter, level=logging.INFO)
+#logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
+#logger = logging.getLogger("tools")
+#logger.setLevel(logging.INFO)
 
 def get_search_url_by_day(q, date):
     
@@ -87,27 +88,32 @@ def _get_next_page_link(soup):
     else:
         return None
 
-# Based on https://stackoverflow.com/a/295466
-def slugify(value):
-    """Normalizes string, converts to lowercase, removes non-alpha characters, and converts spaces to hyphens.
-    
-    Arguments:
-        value {str} -- String to transform in a slug
-    
-    Returns:
-        str -- slugified version of input string
-    """
-
-    value = unidecode(value)
-    value = re.sub('[^\w\s-]', '', value).strip().lower()
-    value = re.sub('[-\s]+', '-', value)
-    
-    return value
-
 @click.command()
 @click.option('-q','--query', prompt='Your query', help='Twitter query. You can test it online with weh user interface of twitter.', required=True, type=str)
 @click.option('-s','--start_date', help='This script scrappes tweeter by day by day, so you need to set a start date. Format: YYYY-MM-DD')
 @click.option('-e','--end_date', help='This script scrappes tweeter by day by day, so you need to set a end date. Format: YYYY-MM-DD')
+def __scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
+    """Simple program that greets NAME for a total of COUNT times. (Command line launch)
+    
+    Arguments:
+        query {str} -- Twitter query language expression (can be tested on twitter)
+    
+    Keyword Arguments:
+        start_date {str} -- Start date from being requested a twitter query (default: {arrow.get().format('YYYY-MM-DD')})
+        end_date {str} -- End date from being requested a twitter query  (default: {arrow.get().shift(years=-10).format('YYYY-MM-DD')})
+    """
+
+    df = scape_twitter_by_date(**locals())
+    if df is not None:
+
+        file_start_date = arrow.get(start_date).format('YYYYMMDD')
+        file_end_date = arrow.get(end_date).format('YYYYMMDD')         
+        
+        output_filename = "%s_%s--%s.msg" % (file_start_date, file_end_date,slugify(query))
+        logger.info("Saving results into : %s" % output_filename )
+        df.to_msgpack(output_filename)
+
+
 def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
     """Simple program that greets NAME for a total of COUNT times.
     
@@ -121,7 +127,7 @@ def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM
     cur_date = arrow.get(start_date) 
     finish_date = arrow.get(end_date) 
 
-    logger.info("Scrapping twitter with:[%s]\nFrom Date:[%s]\nTo Date:[%s]" % (query, start_date.format('YYYY-MM-DD'), end_date.format('YYYY-MM-DD')))
+    logger.info("Scrapping 🐦 with:[%s] From 🗓️:[%s] ➡️ To 🗓️:[%s]" % (query, cur_date.format('YYYY-MM-DD'), finish_date.format('YYYY-MM-DD')))
 
     # Create day urls
     urls = []
@@ -149,10 +155,11 @@ def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM
     if len(statuses) > 0: 
         df = pd.DataFrame(statuses)
         df.columns = ['STATUS_ID', 'TWITTER_HREF', 'TIMESTAMP', 'TEXT']
+        return df
+    else:
+        return None
 
-        output_filename = "%s_%s--%s.msg" % (start_date.replace("-",""), end_date.replace("-",""),slugify(query))
-        df.to_msgpack(output_filename)
 
 if __name__ == '__main__':
     tprint("Twitter Scrapper")
-    scape_twitter_by_date()
+    __scape_twitter_by_date()

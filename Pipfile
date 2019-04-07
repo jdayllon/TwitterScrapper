@@ -19,6 +19,8 @@ unidecode = "*"
 art = "*"
 python-twitter = "*"
 elasticsearch = "*"
+pyyaml = "*"
+loguru = "*"
 
 [requires]
 python_version = "3.7"

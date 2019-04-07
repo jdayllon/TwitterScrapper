@@ -11,6 +11,7 @@ import json
 import click
 from tqdm import tnrange, tqdm
 import logging
+from loguru import logger
 import arrow
 from art import tprint
 import io
@@ -24,10 +25,7 @@ ACCESS_TOKEN_SECRET= os.getenv("ACCESS_TOKEN_SECRET")
 STATUSES_INDEX = "twitter"
 TWITTER_DATETIME_PATTERN = "ddd MMM DD HH:mm:SS Z YYYY"
 STEP= 100
-logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
-logging.basicConfig(format=logFormatter, level=logging.INFO)
-logger = logging.getLogger("tools")
-logger.setLevel(logging.INFO)
+
 es_logger = logging.getLogger('elasticsearch')
 es_logger.setLevel(logging.WARNING)
 first_status_id = 0 
@@ -76,31 +74,50 @@ def save_json(json_string: str, filename: str):
 
 @click.command()
 @click.option('-u','--user', prompt='User timeline', help='Get lastest 3k2 from timeline.', required=True, type=str)
-@click.option('-e','--elasticuri', help='Elastic search uri f.e. http://127.0.0.1:9200', type=str )
-@click.option('-x','--elasticindex', help='Elastic search Index (default twitter)', type=str , default="twitter")
+@click.option('-e','--elasticsearch_url', help='Elastic search uri f.e. http://127.0.0.1:9200', type=str )
+@click.option('-x','--elasticsearch_index', help='Elastic search Index (default twitter)', type=str , default="twitter")
 @click.option('-t','--time_sleep', help="Time between twitter api requests in seconds (min 1.1 secs) ", type=float, default=1.1)
 @click.option('-s','--since', help="'Since Status Id", default="0")
 # TODO Add Authparameters
 #click.option('-u','--elasticuser', help='Elastic search user (if authentication is needed)')
 #click.option('-p','--elasticpass', help='Elastic search pass (if authentication is needed)')
-def download_api_timeline(user: str, elasticuri: str, elasticuser: str = None, elasticpass: str = None, elasticindex: str= STATUSES_INDEX, time_sleep: float = 1.1, since: str ='0'):
+def __download_api_timeline(user: str, elasticsearch_url: str, elasticuser: str = None, elasticpass: str = None, elasticsearch_index: str= STATUSES_INDEX, time_sleep: float = 1.1, since: str ='0'):
+    """Goes to twitter API an get timeline of a user_id and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too (Command line launch)
+    
+    Arguments:
+        user {str} -- Twitter Screen Name
+        elasticsearch_url {str} -- Base url of ElasticSearch
+    
+    Keyword Arguments:
+        elasticuser {str} -- Elastic User - Not Used (default: {None})
+        elasticpass {str} -- Elastic Password - Not Used (default: {None})
+        elasticsearch_index {str} -- Id of ElasticSearch Index (default: {STATUSES_INDEX})
+        time_sleep {float} -- Time between requests (default: {1.1})
+        since {str} -- Status ID to start twitter extraction (default: {'0'})        
+    """
+
+    return download_api_timeline(**locals())
+
+def download_api_timeline(user: str, elasticsearch_url: str, elasticuser: str = None, elasticpass: str = None, elasticsearch_index: str= STATUSES_INDEX, time_sleep: float = 1.1, since: str ='0'):
     """Goes to twitter API an get timeline of a user_id and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too
     
     Arguments:
-        user {str} -- [description]
-        elasticuri {str} -- [description]
+        user {str} -- Twitter Screen Name
+        elasticsearch_url {str} -- Base url of ElasticSearch
     
     Keyword Arguments:
-        elasticuser {str} -- [description] (default: {None})
-        elasticpass {str} -- [description] (default: {None})
-        elasticindex {str} -- [description] (default: {STATUSES_INDEX})
+        elasticuser {str} -- Elastic User - Not Used (default: {None})
+        elasticpass {str} -- Elastic Password - Not Used (default: {None})
+        elasticsearch_index {str} -- Id of ElasticSearch Index (default: {STATUSES_INDEX})
+        time_sleep {float} -- Time between requests (default: {1.1})
+        since {str} -- Status ID to start twitter extraction (default: {'0'})        
     """
 
     global first_status_id
 
     # Create a connection with Elastic
-    if elasticuri is not None:
-        es = Elasticsearch(elasticuri)
+    if elasticsearch_url is not None:
+        es = Elasticsearch(elasticsearch_url)
         logger.info(es.info())
     else:
         es = None
@@ -166,14 +183,15 @@ def download_api_timeline(user: str, elasticuri: str, elasticuser: str = None, e
 
         save_json(cur_json,"./json/" + cur_id_str + ".json")
         if es is not None:
-            es.index(index=elasticindex,
+            es.index(index=elasticsearch_index,
                     #ignore=400,
                     doc_type='status',
                     id = cur_id_str,
                     body=cur_json)
     # STDOut and STDErr
     print("%d" % first_status_id)
+    return first_status_id
 
 if __name__ == '__main__':
     tprint("Twitter 3k2 Timeline ")
-    download_api_timeline()
+    __download_api_timeline()

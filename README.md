@@ -2,20 +2,22 @@
 Python scripts to scrape and download statuses from Twitter API. Bypass 3200 statuses limit from Twitter API getting statuses from mobile web.
 
 There are several scripts:
-* twitter_scraper.py Goes to Twitter Mobile without Javascript mode and gets basic status info, and saves it in a Pandas Dataframe in MSGPack format (json binary alt) 
+* query_scrapper.py Goes to Twitter Mobile without Javascript mode and gets basic status info, and saves it in a Pandas Dataframe in MSGPack format (json binary alt) 
   * Tweet ID
   * Text
   * Date
   * Href
-* twitter_api_extracion.py. Goes to Twitter API with the output of first script (DataFrame in MSGPack format) and reads all status id and get info **full-text** info from API. After extraction creates a "json" dir with all tweets in json format (one tweet for file).
+* api_extracion.py. Goes to Twitter API with the output of first script (DataFrame in MSGPack format) and reads all status id and get info **full-text** info from API. After extraction creates a "json" dir with all tweets in json format (one tweet for file).
   * This scripts modifies date format of twitter to get loaded in an ElasticSearch index
   * This scripts can (optional) send all tweets to an ElasticSeach index
 * full_load_json_directory_es.py (Not finished yet). Loads all json files in json dir into a ElasticSearch index
 * setup_elastic_es.sh. Creates a "twitter" index in ElasticSearch and put a customized mapping with **spanish analyzers** activated
   * index_status_es.json. Json with index configuration for ElasticSearch
   * mapping_status_es.json. Json with mapping configuration for ElasticSearch (spanish analyzers included)
-* twitter_get_3k2.py. Goes to Twitter API with an user id and gets lastest statuses and loops over it up to 3200 limit. 
+* get_timeline.py. Goes to Twitter API with an user id and gets lastest statuses and loops over it up to 3200 limit. 
   * You can a start status id (since) and get all updates after that status. It can be useful to grab updates. 
+* job_runner.py. Schedules querys and timelines extractions with a .yml as definition of jobs
+* tools.py. Primitive common functions for scripts
 
 ## Enviorenment 
 
@@ -31,21 +33,21 @@ ACCESS_TOKEN_SECRET='<<YOUR_ACCESS_TOKEN_SECRET_FROM_TWITTER>>'
 
 Get tweets from a particular user for a month
 ```
-python twitter_scrapper.py -q 'from:jda11on' -s 2019-01-01 -e 2019-01-31
+python query_scrapper.py -q 'from:jda11on' -s 2019-01-01 -e 2019-01-31
 ```
 More complex twitter query:
 ```
-python twitter_scrapper.py -q 'to:ServiciosAND OR to:AndaluciaJunta OR to:OpenDataAND' -s 2011-12-01 -e 2019-03-26
+python query_scrapper.py -q 'to:ServiciosAND OR to:AndaluciaJunta OR to:OpenDataAND' -s 2011-12-01 -e 2019-03-26
 ```
 
 Get Tweet data from Twitter API
 ```
-python twitter_api_extraction.py -i 20180101_20190326--toserviciosand-or-toandaluciajunta-or-toopendataand.msg
+python api_extraction.py -i 20180101_20190326--toserviciosand-or-toandaluciajunta-or-toopendataand.msg
 ```
 
 Get Lastest TimeLine updates from a user
 ```
-python twitter_get_3k2.py -u AndaluciaJunta -s 1112819068057370624 -e http://127.0.0.1:9200
+python get_timeline.py -u AndaluciaJunta -s 1112819068057370624 -e http://127.0.0.1:9200
 ```
 
 ## Crontab
@@ -60,7 +62,7 @@ then
 else
     value=0
 fi
-python twitter_get_3k2.py -e "http://127.0.0.1:9200" -u $1 -s $value > $output_file
+python get_timeline.py -e "http://127.0.0.1:9200" -u $1 -s $value > $output_file
 ```
 
 ## TODOs
