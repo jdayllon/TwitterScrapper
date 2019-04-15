@@ -14,11 +14,10 @@ from dotenv import find_dotenv, load_dotenv
 
 import arrow
 import twitter
-from art import tprint
 from elasticsearch import Elasticsearch, RequestError, helpers
 from loguru import logger
-from query_scrapper import scape_twitter_by_date
-from tools import dotter, hydratate_status, save_json
+from query_scrapper import scrape_twitter_by_date
+from tools import dotter, hydratate_status, save_json, esK3K2_ascii_art
 from tqdm import tnrange, tqdm
 from scalpl import Cut
 
@@ -95,7 +94,7 @@ def query_api_statuses(query: str, elasticsearch_url: str, elasticuser: str = No
 
     logger.info("Scrapping query on Twitter")
 
-    df = scape_twitter_by_date(query, start_date = arrow.now().format('YYYY-MM-DD'),  end_date=arrow.now().format('YYYY-MM-DD'))
+    df = scrape_twitter_by_date(query, start_date = arrow.now().format('YYYY-MM-DD'),  end_date=arrow.now().format('YYYY-MM-DD'))
 
     if df is not None:
         lst_statuses_ids = df['STATUS_ID'].tolist()
@@ -128,5 +127,6 @@ def query_api_statuses(query: str, elasticsearch_url: str, elasticuser: str = No
                         body=cur_json)        
 
 if __name__ == '__main__':
-    tprint("Twitter Query API")
+    esK3K2_ascii_art()
+    print("Twitter Query API")
     __query_api_statuses()

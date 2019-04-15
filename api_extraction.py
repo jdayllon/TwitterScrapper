@@ -16,7 +16,7 @@ import arrow
 from art import tprint
 import io
 
-from tools import hydratate_status, dotter, save_json
+from tools import hydratate_status, dotter, save_json, _prepare_json_status
 
 load_dotenv(find_dotenv(), verbose=True)
 
@@ -31,14 +31,10 @@ es_logger = logging.getLogger('elasticsearch')
 es_logger.setLevel(logging.WARNING)
 
 @click.command()
-@click.option('-i','--input', help='Input file in MSGPACK format with a column named STATUS_ID with Twitter STATUS_ID ;-)', required=True, type=str)
-@click.option('-e','--elasticsearch_url', help='Elastic search uri f.e. http://127.0.0.1:9200 (default)', type=str , default="http://127.0.0.1:9200/")
-@click.option('-x','--elasticsearch_index', help='Elastic search Index (default twitter)', type=str , default="twitter")
+@click.option('-i','--input', help='Input file in MSGPACK format or CSV with a column named STATUS_ID with Twitter STATUS_ID ;-)', required=True, type=str)
+@click.option('-c','--config_file', prompt='Enter yml settings file', help='YML file with the definition of settings and jobs', required=True, type=str, default = 'twitter_scrapper.yml')
 @click.option('-t','--time_sleep', help="'Time between twitter api requests in seconds (min 1.1 secs) ", type=float, default=1.1)
-# TODO Add Authparameters
-#click.option('-u','--elasticuser', help='Elastic search user (if authentication is needed)')
-#click.option('-p','--elasticpass', help='Elastic search pass (if authentication is needed)')
-def download_api_statuses(input: str, elasticsearch_url: str, elasticuser: str = None, elasticpass: str = None, elasticsearch_index: str= STATUSES_INDEX, time_sleep: float = 1.1):
+def download_api_statuses(input: str, config_file: str = None, time_sleep: float = 1.1):
     """Goes to twitter API an get status info (hydratated) and saves into a json file (in "json" dir) and if Elasticsearch is identified send it too
     
     Arguments:
@@ -50,11 +46,11 @@ def download_api_statuses(input: str, elasticsearch_url: str, elasticuser: str =
         elasticpass {str} -- [description] (default: {None})
         elasticsearch_index {str} -- [description] (default: {STATUSES_INDEX})
     """
-
+    settings = Settings()._load_config(config_file)
 
     # Create a connection with Elastic
-    if elasticsearch_url is not None:
-        es = Elasticsearch(elasticsearch_url)
+    if settings.elasticsearch_url is not None:
+        es = Elasticsearch(settings.elasticsearch_url)
         logger.info(es.info())
     else:
         es = None
@@ -65,8 +61,12 @@ def download_api_statuses(input: str, elasticsearch_url: str, elasticuser: str =
     except:
         logger.error("Time Sleep less than 1.1 secs (minimum) ")
         raise err
+
     # Read MSGPACK file whith statuses id
-    df = pd.read_msgpack(input)
+    if ".msg" in input.lower():
+        df = pd.read_msgpack(input)
+    elif ".csv" in input.lower():
+        df = pd.read_csv(input)
 
     api = twitter.Api(consumer_key=CONSUMER_KEY,
                   consumer_secret=CONSUMER_SECRET,
@@ -82,6 +82,7 @@ def download_api_statuses(input: str, elasticsearch_url: str, elasticuser: str =
 
     # Save all jsons to file and load into Elastic
     logger.info("Processing Statuses from 🐦 API to save jsons")
+    
     for c_status_data in tqdm(all_statuses_data):
         cur_dict = Cut(c_status_data.AsDict())
         cur_id_str = cur_dict['id_str']
@@ -95,13 +96,15 @@ def download_api_statuses(input: str, elasticsearch_url: str, elasticuser: str =
                     cur_dict[created_at_keys] = cur_dt.format("YYYY-MM-DDTHH:MM:SS")+"Z"
         except:
             logger.error("Error parsing dates on %s" % cur_id_str)
+        
+        # To ES improved data
+        cur_json = _prepare_json_status(c_status_data)
+        # TO FS orginal data backup
+        cur_json_backup = json.dumps(c_status_data.AsDict(), indent=4)
 
-        cur_json = json.dumps(cur_dict.data, indent=4)
-
-        save_json(cur_json,"./json/" + cur_id_str + ".json")
+        save_json(cur_json_backup,settings.status_json_backup + cur_id_str + ".json")
         if es is not None:
             es.index(index=elasticsearch_index,
-                    #ignore=400,
                     doc_type='status',
                     id = cur_id_str,
                     body=cur_json)

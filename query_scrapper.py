@@ -9,15 +9,9 @@ import pickle
 import click
 import re
 import urllib
-from art import tprint
 import logging
-from tools import slugify
+from tools import slugify, esK3K2_ascii_art
 from loguru import logger
-
-#logging.basicConfig(format=logFormatter, level=logging.INFO)
-#logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
-#logger = logging.getLogger("tools")
-#logger.setLevel(logging.INFO)
 
 def get_search_url_by_day(q, date):
     
@@ -92,7 +86,7 @@ def _get_next_page_link(soup):
 @click.option('-q','--query', prompt='Your query', help='Twitter query. You can test it online with weh user interface of twitter.', required=True, type=str)
 @click.option('-s','--start_date', help='This script scrappes tweeter by day by day, so you need to set a start date. Format: YYYY-MM-DD')
 @click.option('-e','--end_date', help='This script scrappes tweeter by day by day, so you need to set a end date. Format: YYYY-MM-DD')
-def __scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
+def __scrape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
     """Simple program that greets NAME for a total of COUNT times. (Command line launch)
     
     Arguments:
@@ -103,7 +97,7 @@ def __scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-
         end_date {str} -- End date from being requested a twitter query  (default: {arrow.get().shift(years=-10).format('YYYY-MM-DD')})
     """
 
-    df = scape_twitter_by_date(**locals())
+    df = scrape_twitter_by_date(**locals())
     if df is not None:
 
         file_start_date = arrow.get(start_date).format('YYYYMMDD')
@@ -114,7 +108,7 @@ def __scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-
         df.to_msgpack(output_filename)
 
 
-def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
+def scrape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM-DD'), end_date:str=arrow.get().shift(years=-10).format('YYYY-MM-DD')):
     """Simple program that greets NAME for a total of COUNT times.
     
     Arguments:
@@ -139,6 +133,7 @@ def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM
 
     statuses = []
     for c_url in tqdm(urls):
+        logger.info("Requesting: %s" % c_url)
         res = requests.get(c_url)
 
         soup = BeautifulSoup(res.content,"html.parser")
@@ -151,7 +146,7 @@ def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM
             statuses += _get_status(next_soup)
             next_c_url = _get_next_page_link(next_soup)
 
-    print("Statuses Found: %d" % len(statuses))
+    logger.info("Statuses Found: %d" % len(statuses))
     if len(statuses) > 0: 
         df = pd.DataFrame(statuses)
         df.columns = ['STATUS_ID', 'TWITTER_HREF', 'TIMESTAMP', 'TEXT']
@@ -161,5 +156,6 @@ def scape_twitter_by_date(query: str, start_date:str=arrow.get().format('YYYY-MM
 
 
 if __name__ == '__main__':
-    tprint("Twitter Scrapper")
-    __scape_twitter_by_date()
+    esK3K2_ascii_art()
+    print("Twitter Scrapper")
+    __scrape_twitter_by_date()
